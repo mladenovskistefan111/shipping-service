@@ -35,7 +35,7 @@ func (s *Service) GetQuote(_ context.Context, req *pb.GetQuoteRequest) (*pb.GetQ
 		CostUsd: &pb.Money{
 			CurrencyCode: "USD",
 			Units:        int64(quote.Dollars),
-			Nanos:        int32(quote.Cents * 10_000_000),
+			Nanos:        int32(quote.Cents * 10_000_000), //#nosec G115  // Cents is always 0-99, overflow impossible
 		},
 	}, nil
 }

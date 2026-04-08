@@ -18,13 +18,13 @@ func TrackingID(salt string) string {
 }
 
 func randomLetter() rune {
-	return rune(65 + rand.Intn(25)) // A-Z
+	return rune(65 + rand.Intn(25)) //#nosec G115 G404 // tracking IDs are not security-sensitive
 }
 
 func randomDigits(n int) string {
 	buf := make([]byte, n)
 	for i := range buf {
-		buf[i] = '0' + byte(rand.Intn(10))
+		buf[i] = '0' + byte(rand.Intn(10)) //#nosec G115 G404 // tracking IDs are not security-sensitive
 	}
 	return string(buf)
 }

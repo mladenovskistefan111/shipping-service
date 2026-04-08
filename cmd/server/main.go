@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"net"
 	"net/http"
-	_ "net/http/pprof"
+	"net/http/pprof"
 	"os"
 	"time"
 
@@ -111,13 +111,23 @@ func run(port string) error {
 	go func() {
 		metricsMux := http.NewServeMux()
 		metricsMux.Handle("/metrics", promhttp.Handler())
-		metricsMux.Handle("/debug/pprof/", http.DefaultServeMux)
+		metricsMux.HandleFunc("/debug/pprof/", pprof.Index)
+		metricsMux.HandleFunc("/debug/pprof/cmdline", pprof.Cmdline)
+		metricsMux.HandleFunc("/debug/pprof/profile", pprof.Profile)
+		metricsMux.HandleFunc("/debug/pprof/symbol", pprof.Symbol)
+		metricsMux.HandleFunc("/debug/pprof/trace", pprof.Trace)
 		metricsPort := "9090"
 		if p := os.Getenv("METRICS_PORT"); p != "" {
 			metricsPort = p
 		}
 		log.Infof("metrics + pprof endpoint on :%s", metricsPort)
-		if err := http.ListenAndServe(":"+metricsPort, metricsMux); err != nil {
+		httpSrv := &http.Server{
+			Addr:         ":" + metricsPort,
+			Handler:      metricsMux,
+			ReadTimeout:  5 * time.Second,
+			WriteTimeout: 10 * time.Second,
+		}
+		if err := httpSrv.ListenAndServe(); err != nil {
 			log.Warnf("metrics server error: %v", err)
 		}
 	}()
