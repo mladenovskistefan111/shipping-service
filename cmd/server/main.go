@@ -12,8 +12,8 @@ import (
 	"shipping-service/internal/shipping"
 	pb "shipping-service/proto"
 
-	grpcprom "github.com/grpc-ecosystem/go-grpc-prometheus"
 	"github.com/grafana/pyroscope-go"
+	grpcprom "github.com/grpc-ecosystem/go-grpc-prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/sirupsen/logrus"
 	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
