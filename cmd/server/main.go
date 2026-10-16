@@ -18,13 +18,8 @@ import (
 	"github.com/sirupsen/logrus"
 	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
 	"go.opentelemetry.io/otel/propagation"
-	"go.opentelemetry.io/otel/sdk/resource"
-	sdktrace "go.opentelemetry.io/otel/sdk/trace"
-	semconv "go.opentelemetry.io/otel/semconv/v1.24.0"
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/health"
 	healthpb "google.golang.org/grpc/health/grpc_health_v1"
 	"google.golang.org/grpc/reflection"
@@ -46,15 +41,17 @@ func init() {
 }
 
 func main() {
-	// --- Tracing (OpenTelemetry → Grafana Tempo via Alloy) ---
-	if os.Getenv("ENABLE_TRACING") == "1" {
-		if err := initTracing(); err != nil {
-			log.Warnf("tracing init failed, continuing without it: %v", err)
-		} else {
-			log.Info("tracing enabled")
-		}
+	// --- Telemetry: traces, metrics and logs pushed over OTLP/gRPC (Alloy → Tempo/Mimir/Loki) ---
+	shutdownTelemetry, err := initTelemetry(context.Background(), "shipping-service", log)
+	if err != nil {
+		log.Warnf("telemetry disabled, continuing without it: %v", err)
 	} else {
-		log.Info("tracing disabled — set ENABLE_TRACING=1 to enable")
+		log.Info("telemetry enabled (OTLP/gRPC)")
+		defer func() {
+			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer cancel()
+			_ = shutdownTelemetry(ctx)
+		}()
 	}
 
 	// --- Profiling (pprof HTTP + Pyroscope push) ---
@@ -134,51 +131,6 @@ func run(port string) error {
 
 	log.Infof("listening on %s", listener.Addr().String())
 	return srv.Serve(listener)
-}
-
-// initTracing wires OpenTelemetry to an OTLP gRPC collector (Alloy).
-func initTracing() error {
-	collectorAddr := os.Getenv("COLLECTOR_SERVICE_ADDR")
-	if collectorAddr == "" {
-		return fmt.Errorf("COLLECTOR_SERVICE_ADDR not set")
-	}
-
-	ctx := context.Background()
-
-	conn, err := grpc.NewClient(
-		collectorAddr,
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
-	)
-	if err != nil {
-		return fmt.Errorf("failed to connect to collector %s: %w", collectorAddr, err)
-	}
-
-	exporter, err := otlptracegrpc.New(ctx, otlptracegrpc.WithGRPCConn(conn))
-	if err != nil {
-		return fmt.Errorf("failed to create otlp exporter: %w", err)
-	}
-
-	serviceName := os.Getenv("OTEL_SERVICE_NAME")
-	if serviceName == "" {
-		serviceName = "shipping-service"
-	}
-
-	res, err := resource.New(ctx,
-		resource.WithAttributes(
-			semconv.ServiceNameKey.String(serviceName),
-		),
-	)
-	if err != nil {
-		return fmt.Errorf("failed to create resource: %w", err)
-	}
-
-	tp := sdktrace.NewTracerProvider(
-		sdktrace.WithBatcher(exporter),
-		sdktrace.WithSampler(sdktrace.AlwaysSample()),
-		sdktrace.WithResource(res),
-	)
-	otel.SetTracerProvider(tp)
-	return nil
 }
 
 // initProfiling starts the Pyroscope push-based profiler.
