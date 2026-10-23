@@ -1,6 +1,6 @@
 module shipping-service
 
-go 1.26.9
+go 1.26.10
 
 require (
 	github.com/grafana/pyroscope-go v1.4.3
