@@ -1,0 +1,43 @@
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: shipping-service
+  title: shipping-service
+  description: "A gRPC service that provides shipping quotes and \"ships\" orders for the platform-demo e-commerce platform."
+  annotations:
+    github.com/project-slug: platform-boutique/app-shipping-service
+    backstage.io/source-location: url:https://github.com/platform-boutique/app-shipping-service/tree/main/
+    backstage.io/techdocs-ref: dir:.
+    backstage.io/kubernetes-id: shipping-service
+    backstage.io/kubernetes-namespace: platform-demo
+    backstage.io/kubernetes-label-selector: app.kubernetes.io/name=shipping-service
+    argocd/app-name: dev-shipping-service
+    grafana/dashboard-selector: "tags @> 'shipping'"
+    grafana/alert-label-selector: "service=shipping-service"
+    grafana/overview-dashboard: "https://grafana.platform-demo.test/d/shipping-service-overview"
+  tags: [go, grpc]
+  links:
+    - { url: "https://argocd.platform-demo.test/applications/argocd/dev-shipping-service", title: Argo CD, icon: dashboard }
+    - { url: "https://grafana.platform-demo.test/d/shipping-service-overview", title: Grafana dashboard, icon: dashboard }
+spec:
+  type: service
+  lifecycle: experimental
+  owner: group:default/maintainers
+  system: shop
+  providesApis: [shipping-service-api]
+---
+apiVersion: backstage.io/v1alpha1
+kind: API
+metadata:
+  name: shipping-service-api
+  description: gRPC interface of shipping-service (Protocol Buffers).
+  tags: [grpc, protobuf]
+  links:
+    - { url: "https://github.com/platform-boutique/app-shipping-service/blob/main/proto/shipping.proto", title: "shipping.proto on GitHub", icon: code }
+spec:
+  type: grpc
+  lifecycle: experimental
+  owner: group:default/maintainers
+  system: shop
+  definition:
+    $text: ./proto/shipping.proto
