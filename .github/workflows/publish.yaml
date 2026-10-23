@@ -28,7 +28,7 @@ jobs:
       contents: read
       packages: write
       id-token: write # keyless cosign signing
-    uses: platform-boutique/platform-demo-workflows/.github/workflows/service-publish.yaml@7c165f98ee025ed58f7481d90a18b69b531953c6 # v3.4.0
+    uses: platform-boutique/platform-demo-workflows/.github/workflows/service-publish.yaml@2158a860e3e0558d49905e69778c51338e8d74db # v3.5.0
     with:
       app: shipping-service
       trivyignores: .trivyignore
