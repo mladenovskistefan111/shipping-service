@@ -1,11 +1,20 @@
 name: Publish
 
-# A merge to main publishes the image ONCE (ghcr.io staging, Trivy, Docker Hub as sha-<commit>, cosign, SBOM) and opens the
-# pull request in platform-demo-helm that moves `dev` to the new digest. No tags, no rebuilds.
+# A merge to main publishes the image ONCE (the image the pull request built is reused when main's tree is the same; Trivy, Docker
+# Hub as sha-<commit>, cosign, SBOM) and opens the pull request in platform-demo-helm that moves `dev` to the new digest.
+# No tags, no rebuilds. The `merge` job of ci.yaml starts this workflow by hand-dispatch (a merge made with the workflow token
+# fires no push trigger) and passes `before` = main's commit before the merge, so a documentation-only merge publishes nothing.
+# Started by hand without `before`, it publishes.
 on:
   push:
     branches: [main]
   workflow_dispatch:
+    inputs:
+      before:
+        description: Commit main was at before the change (empty = publish; set = a documentation-only change since then publishes nothing)
+        type: string
+        required: false
+        default: ""
 
 permissions: {}
 
@@ -19,10 +28,11 @@ jobs:
       contents: read
       packages: write
       id-token: write # keyless cosign signing
-    uses: platform-boutique/platform-demo-workflows/.github/workflows/service-publish.yaml@ee7562da9860ad2c824ce50e6d56c1f62f1d3515 # v3.3.0
+    uses: platform-boutique/platform-demo-workflows/.github/workflows/service-publish.yaml@7c165f98ee025ed58f7481d90a18b69b531953c6 # v3.4.0
     with:
       app: shipping-service
       trivyignores: .trivyignore
+      before: ${{ inputs.before }}
     secrets:
       DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
       DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
